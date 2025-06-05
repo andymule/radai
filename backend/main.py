@@ -108,13 +108,13 @@ def get_permits(applicant: str = None, status: str = None):
         return JSONResponse(status_code=500, content={"error": "Internal Server Error"})
 
 @app.get("/permits/address")
-def search_by_address(street: str):
+def search_by_address(address: str):
     try:
         conn = get_db_conn()
         cursor = conn.cursor()
         query = "SELECT * FROM permits WHERE address LIKE ?"
         # Add wildcards for partial matching and make case-insensitive
-        params = [f"%{street}%"]
+        params = [f"%{address}%"]
         cursor.execute(query, params)
         columns = [desc[0] for desc in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
@@ -125,7 +125,7 @@ def search_by_address(street: str):
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello, world!"}
+    return {"message": "Food Facility Permits API"}
 
 def haversine_distance(lat1, lon1, lat2, lon2):
     """
@@ -144,7 +144,7 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     return c * r
 
 @app.get("/permits/nearby")
-def find_nearby(lat: float, lon: float, status: str = None, limit: int = 10, include_all: bool = False):
+def find_nearby(lat: float, lon: float, status: str = None, radius: float = 1.0):
     try:
         conn = get_db_conn()
         cursor = conn.cursor()
@@ -162,14 +162,10 @@ def find_nearby(lat: float, lon: float, status: str = None, limit: int = 10, inc
         params = [lat, lat, lon, lon]
         
         # Add status filter if provided
-        if status and not include_all:
+        if status:
             query += " AND status = ?"
             params.append(status)
             
-        # Order by distance and limit results
-        query += " ORDER BY distance_squared ASC LIMIT ?"
-        params.append(limit)
-        
         cursor.execute(query, params)
         columns = [desc[0] for desc in cursor.description]
         results = []
@@ -177,13 +173,16 @@ def find_nearby(lat: float, lon: float, status: str = None, limit: int = 10, inc
         for row in cursor.fetchall():
             permit = dict(zip(columns, row))
             # Calculate actual distance in kilometers
-            permit['distance_km'] = haversine_distance(
+            distance = haversine_distance(
                 lat, lon,
                 permit['latitude'], permit['longitude']
             )
-            # Remove the temporary distance_squared field
-            del permit['distance_squared']
-            results.append(permit)
+            # Only include permits within the radius
+            if distance <= radius:
+                permit['distance'] = distance
+                # Remove the temporary distance_squared field
+                del permit['distance_squared']
+                results.append(permit)
             
         return JSONResponse(content=results)
     except Exception as e:

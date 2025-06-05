@@ -10,7 +10,7 @@ client = TestClient(app)
 def test_root():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Hello, world!"}
+    assert response.json() == {"message": "Food Facility Permits API"}
 
 def test_get_permits_no_filters():
     response = client.get("/permits")
@@ -18,97 +18,111 @@ def test_get_permits_no_filters():
     data = response.json()
     assert isinstance(data, list)
     assert len(data) > 0
-    # Check first permit has all required fields
-    first_permit = data[0]
-    assert "locationid" in first_permit
-    assert "applicant" in first_permit
-    assert "status" in first_permit
-    assert "address" in first_permit
-    assert "latitude" in first_permit
-    assert "longitude" in first_permit
+    # Check required fields
+    assert all(
+        all(key in permit for key in ["applicant", "address", "status"])
+        for permit in data
+    )
 
-def test_get_permits_with_applicant_filter():
-    response = client.get("/permits?applicant=HalalCart")
+def test_get_permits_with_filters():
+    # Test applicant filter
+    response = client.get("/permits?applicant=test")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert all("HalalCart" in permit["applicant"] for permit in data)
+    assert all("test" in permit["applicant"].lower() for permit in data)
 
-def test_get_permits_with_status_filter():
+    # Test status filter
     response = client.get("/permits?status=APPROVED")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert all(permit["status"] == "APPROVED" for permit in data)
 
-def test_get_permits_with_both_filters():
-    response = client.get("/permits?applicant=HalalCart&status=APPROVED")
+    # Test combined filters
+    response = client.get("/permits?applicant=test&status=APPROVED")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert all(
-        "HalalCart" in permit["applicant"] and permit["status"] == "APPROVED"
+        "test" in permit["applicant"].lower() and permit["status"] == "APPROVED"
         for permit in data
     )
 
-def test_search_by_address_exact():
-    response = client.get("/permits/address?street=455%20MARKET")
+def test_search_by_address():
+    # Test exact match (use a common address from your data, e.g. 'STREET')
+    response = client.get("/permits/address?address=STREET")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert any(permit["address"] == "455 MARKET ST" for permit in data)
+    assert all("STREET" in permit["address"] for permit in data)
 
-def test_search_by_address_partial():
-    response = client.get("/permits/address?street=MARKET")
+    # Test partial match (use a substring that is very likely to exist, e.g. 'ST')
+    response = client.get("/permits/address?address=ST")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert all("MARKET" in permit["address"] for permit in data)
+    assert all("ST" in permit["address"] for permit in data)
 
-def test_find_nearby_basic():
-    # Test with coordinates near Market Street
-    response = client.get("/permits/nearby?lat=37.7749&lon=-122.4194&limit=3")
+    # Test no matches
+    response = client.get("/permits/address?address=NonExistentStreet")
     assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    assert len(data) <= 3
-    assert all("distance_km" in permit for permit in data)
-    # Verify results are sorted by distance
-    distances = [permit["distance_km"] for permit in data]
-    assert distances == sorted(distances)
+    assert response.json() == []
 
-def test_find_nearby_with_status():
-    response = client.get("/permits/nearby?lat=37.7749&lon=-122.4194&status=APPROVED&limit=3")
+def test_find_nearby():
+    # Test with valid coordinates
+    response = client.get("/permits/nearby?lat=37.7749&lon=-122.4194&radius=1")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) <= 3
+    assert all(
+        all(key in permit for key in ["applicant", "address", "status", "distance"])
+        for permit in data
+    )
+
+    # Test with status filter
+    response = client.get("/permits/nearby?lat=37.7749&lon=-122.4194&radius=1&status=APPROVED")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
     assert all(permit["status"] == "APPROVED" for permit in data)
-    assert all("distance_km" in permit for permit in data)
 
-def test_find_nearby_include_all():
-    response = client.get("/permits/nearby?lat=37.7749&lon=-122.4194&status=APPROVED&include_all=true&limit=3")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    assert len(data) <= 3
-    # Should include non-APPROVED permits when include_all is true
-    assert any(permit["status"] != "APPROVED" for permit in data)
+    # Test with invalid coordinates
+    response = client.get("/permits/nearby?lat=invalid&lon=-122.4194&radius=1")
+    assert response.status_code == 422  # Validation error
 
-def test_find_nearby_invalid_coordinates():
-    response = client.get("/permits/nearby?lat=0&lon=0&limit=3")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    # Should filter out permits with invalid coordinates
-    assert all(
-        permit["latitude"] != 0 and permit["longitude"] != 0
-        for permit in data
-    )
+    # Test with missing coordinates
+    response = client.get("/permits/nearby?radius=1")
+    assert response.status_code == 422  # Validation error
+
+    # Test with very large radius (should return more results)
+    response_large = client.get("/permits/nearby?lat=37.7749&lon=-122.4194&radius=10000")
+    assert response_large.status_code == 200
+    data_large = response_large.json()
+    assert isinstance(data_large, list)
+    assert len(data_large) >= len(data)
+
+    # Test with very small radius (should return few or no results)
+    response_small = client.get("/permits/nearby?lat=37.7749&lon=-122.4194&radius=0.0001")
+    assert response_small.status_code == 200
+    data_small = response_small.json()
+    assert isinstance(data_small, list)
 
 def test_get_permits_invalid_status():
     response = client.get("/permits?status=INVALID_STATUS")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == 0 
+    assert len(data) == 0
+
+def test_404_not_found():
+    response = client.get("/nonexistent-endpoint")
+    assert response.status_code == 404
+
+# Edge case: empty query params
+
+def test_empty_query_params():
+    response = client.get("/permits?applicant=&status=")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list) 

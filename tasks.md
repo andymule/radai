@@ -39,14 +39,14 @@
 ## Phase 2: VS Code Extension Development
 
 ### 1. Extension Project Setup
-- [ ] Create VS Code extension project
+- [x] Create VS Code extension project
   ```bash
   cd electron-app
   npm init @vscode/extension permits-extension
   ```
-- [ ] Configure package.json
-  - [ ] Add activation event: `"activationEvents": ["onCommand:permits.openSearchUI"]`
-  - [ ] Add command contribution:
+- [x] Configure package.json
+  - [x] Add activation event: `"activationEvents": ["onCommand:permits.openSearchUI"]`
+  - [x] Add command contribution:
     ```json
     {
       "contributes": {
@@ -57,24 +57,24 @@
       }
     }
     ```
-- [ ] Set up TypeScript development
+- [x] Set up TypeScript development
   ```bash
   cd permits-extension
   npm install --save-dev typescript @types/node @types/vscode
   ```
-  - [ ] Create minimal tsconfig.json for extension.ts → out/extension.js
+  - [x] Create minimal tsconfig.json for extension.ts → out/extension.js
 
 ### 2. Backend Process Management
-- [ ] Implement extension.ts
-  - [ ] Create activate(context) function
-    - [ ] Spawn Python FastAPI backend using child_process.spawn
-    - [ ] Log stdout/stderr to VS Code console
-    - [ ] Handle spawn failures with vscode.window.showErrorMessage
-  - [ ] Register "permits.openSearchUI" command
-  - [ ] Implement deactivate() to kill backend process
+- [x] Implement extension.ts
+  - [x] Create activate(context) function
+    - [x] Spawn Python FastAPI backend using child_process.spawn
+    - [x] Log stdout/stderr to VS Code console
+    - [x] Handle spawn failures with vscode.window.showErrorMessage
+  - [x] Register "permits.openSearchUI" command
+  - [x] Implement deactivate() to kill backend process
 
 ### 3. Webview Project Setup
-- [ ] Initialize React + TypeScript project
+- [x] Initialize React + TypeScript project
   ```bash
   cd permits-extension
   mkdir webview
@@ -83,59 +83,56 @@
   npm install react react-dom
   npm install --save-dev typescript @types/react @types/react-dom esbuild
   ```
-- [ ] Configure webview
-  - [ ] Create tsconfig.json with React JSX support
-  - [ ] Set up src/index.tsx with root div
-  - [ ] Create src/App.tsx with component placeholders:
-    - [ ] SearchBar
-    - [ ] StatusFilter
-    - [ ] ListView
-    - [ ] LoadingSpinner
-    - [ ] ErrorBanner
-  - [ ] Add esbuild script to package.json
-  - [ ] Create static webview/dist/index.html with CSP
+- [x] Configure webview
+  - [x] Create tsconfig.json with React JSX support
+  - [x] Set up src/index.tsx with root div
+  - [x] Create src/App.tsx with component placeholders:
+    - [x] SearchBar
+    - [x] StatusFilter
+    - [x] ListView
+    - [x] LoadingSpinner
+    - [x] ErrorBanner
+  - [x] Add esbuild script to package.json
+  - [x] Create static webview/dist/index.html with CSP
 
 ### 4. UI Components & Message Passing
-- [ ] Implement SearchBar.tsx
-  - [ ] Text input for applicant/street search
-  - [ ] Status dropdown (ALL/APPROVED/EXPIRED)
-  - [ ] Search trigger (Enter/button)
-- [ ] Implement ListView.tsx
-  - [ ] Scrollable table/list of permits
-  - [ ] Display: Applicant, Address, Status
-- [ ] Create LoadingSpinner.tsx and ErrorBanner.tsx
-- [ ] Implement App.tsx
-  - [ ] State management (query, status, results, loading, error)
-  - [ ] Message handling
-  - [ ] Tab navigation for:
-    - [ ] Search by Name
-    - [ ] Search by Address
-    - [ ] Find Nearby
-- [ ] Implement extension.ts webview handling
-  - [ ] Create webview panel
-  - [ ] Load index.html
-  - [ ] Handle message routing for:
-    - [ ] /permits endpoint
-    - [ ] /permits/address endpoint
-    - [ ] /permits/nearby endpoint
+- [x] Implement SearchBar.tsx
+  - [x] Text input for applicant/street search
+  - [x] Status dropdown (ALL/APPROVED/EXPIRED)
+  - [x] Search trigger (Enter/button)
+- [x] Implement ListView.tsx
+  - [x] Scrollable table/list of permits
+  - [x] Display: Applicant, Address, Status
+- [x] Create LoadingSpinner.tsx and ErrorBanner.tsx
+- [x] Implement App.tsx
+  - [x] State management (query, status, results, loading, error)
+  - [x] Message handling
+  - [x] Tab navigation for:
+    - [x] Search by Name
+    - [x] Search by Address
+    - [x] Find Nearby
+- [x] Implement extension.ts webview handling
+  - [x] Create webview panel
+  - [x] Load index.html
+  - [x] Handle message routing for:
+    - [x] /permits endpoint
+    - [x] /permits/address endpoint
+    - [x] /permits/nearby endpoint
 
-### 5. Testing & Verification
-- [ ] Set up testing environment
-  ```bash
-  cd permits-extension
-  npm install --save-dev @vscode/test-electron mocha
-  ```
-- [ ] Write Mocha tests (test/suite/extension.test.ts)
-  - [ ] Test activation
-  - [ ] Test backend spawning
-  - [ ] Test message routing
-- [ ] Manual testing checklist
-  - [ ] Backend process launches
-  - [ ] Command appears in palette
-  - [ ] Search by Name works
-  - [ ] Search by Address works
-  - [ ] Find Nearby works
-  - [ ] Error handling works
+### 5. Testing & Documentation
+- [ ] Test all endpoints
+  - [ ] Test /permits with various filters
+  - [ ] Test /permits/address with exact and partial matches
+  - [ ] Test /permits/nearby with valid and invalid coordinates
+- [ ] Test webview UI
+  - [ ] Test search functionality
+  - [ ] Test status filtering
+  - [ ] Test error handling
+  - [ ] Test loading states
+- [ ] Update documentation
+  - [ ] Add API documentation
+  - [ ] Add setup instructions
+  - [ ] Add usage examples
 
 ## Phase 3: Documentation & Polish
 - [ ] Create comprehensive README.md
