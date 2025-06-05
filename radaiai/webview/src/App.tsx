@@ -22,35 +22,39 @@ declare global {
 
 const vscode = window.acquireVsCodeApi();
 
+type SearchMode = 'name' | 'address' | 'nearby';
+
 export const App: React.FC = () => {
     const [permits, setPermits] = useState<Permit[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [mode, setMode] = useState<SearchMode>('name');
 
     const handleSearch = (query: string, status: string) => {
         setLoading(true);
         setError(null);
         
-        // Determine which endpoint to use based on the query
+        // Determine which endpoint to use based on the mode and query
         let endpoint = '/permits';
         const params: Record<string, string> = {};
         
-        if (query) {
-            // If query contains coordinates, use nearby endpoint
-            const coords = query.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
-            if (coords) {
+        switch (mode) {
+            case 'nearby':
+                if (!query) return;
                 endpoint = '/permits/nearby';
-                params.lat = coords[1];
-                params.lon = coords[2];
+                const [lat, lon] = query.split(',');
+                params.lat = lat;
+                params.lon = lon;
                 params.radius = '1.0';
-            } else if (query.match(/[A-Za-z]/)) {
-                // If query contains letters, try address search first
+                break;
+            case 'address':
                 endpoint = '/permits/address';
                 params.address = query;
-            } else {
-                // Otherwise use applicant search
-                params.applicant = query;
-            }
+                break;
+            default: // name
+                if (query) {
+                    params.applicant = query;
+                }
         }
         
         if (status !== 'ALL') {
@@ -86,7 +90,48 @@ export const App: React.FC = () => {
     return (
         <div style={{ padding: '1rem' }}>
             <h1 style={{ marginBottom: '1rem' }}>Food Permits Search</h1>
-            <SearchBar onSearch={handleSearch} />
+            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+                <button
+                    onClick={() => setMode('name')}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: mode === 'name' ? '#007acc' : '#eee',
+                        color: mode === 'name' ? 'white' : 'black',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Search by Name
+                </button>
+                <button
+                    onClick={() => setMode('address')}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: mode === 'address' ? '#007acc' : '#eee',
+                        color: mode === 'address' ? 'white' : 'black',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Search by Address
+                </button>
+                <button
+                    onClick={() => setMode('nearby')}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: mode === 'nearby' ? '#007acc' : '#eee',
+                        color: mode === 'nearby' ? 'white' : 'black',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Find Nearby
+                </button>
+            </div>
+            <SearchBar onSearch={handleSearch} mode={mode} />
             {error && <ErrorBanner message={error} onRetry={() => handleSearch('', 'ALL')} />}
             {loading ? <LoadingSpinner /> : <ListView permits={permits} />}
         </div>
