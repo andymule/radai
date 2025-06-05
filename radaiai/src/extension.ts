@@ -31,12 +31,16 @@ export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('permits.openSearchUI', async () => {
         console.log('Opening Food Permits Search UI...');
 
-        // Use absolute path to backend
-        const backendPath = '/Users/arckex/source/radai/backend';
-        console.log('Using backend path:', backendPath);
+        // Find backend relative to extension location
+        const extensionPath = context.extensionPath;
+        console.log('Extension path:', extensionPath);
+        
+        // Look for backend in parent directory
+        const backendPath = path.join(extensionPath, '..', 'backend');
+        console.log('Looking for backend at:', backendPath);
 
         if (!fs.existsSync(backendPath)) {
-            vscode.window.showErrorMessage(`Backend directory not found at ${backendPath}`);
+            vscode.window.showErrorMessage(`Backend directory not found at ${backendPath}. Please ensure the backend is installed in the parent directory of this extension.`);
             return;
         }
 

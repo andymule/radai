@@ -44,10 +44,12 @@ function activate(context) {
   console.log("Food Facility Permits extension is now active!");
   let disposable = vscode.commands.registerCommand("permits.openSearchUI", async () => {
     console.log("Opening Food Permits Search UI...");
-    const backendPath = "/Users/arckex/source/radai/backend";
-    console.log("Using backend path:", backendPath);
+    const extensionPath = context.extensionPath;
+    console.log("Extension path:", extensionPath);
+    const backendPath = path.join(extensionPath, "..", "backend");
+    console.log("Looking for backend at:", backendPath);
     if (!fs.existsSync(backendPath)) {
-      vscode.window.showErrorMessage(`Backend directory not found at ${backendPath}`);
+      vscode.window.showErrorMessage(`Backend directory not found at ${backendPath}. Please ensure the backend is installed in the parent directory of this extension.`);
       return;
     }
     if (!backendProcess) {
