@@ -1,6 +1,6 @@
 # MVP Development Tasks
 
-## Phase 1: Backend Setup
+## Phase 1: Backend Setup ✅
 1. Create backend directory structure
    - [x] Create `backend/` directory
    - [x] Create `.python-version` with Python 3.11.4
@@ -36,54 +36,125 @@
    - [x] Add limit parameter
    - [x] Test with sample coordinates
 
-## Phase 2: Frontend Setup
-7. Electron App Structure
-   - [ ] Create electron-app directory
-   - [ ] Initialize package.json
-   - [ ] Set up TypeScript configuration
-   - [ ] Create basic HTML shell
+## Phase 2: VS Code Extension Development
 
-8. Main Process
-   - [ ] Set up Electron main process
-   - [ ] Implement Python backend spawning
-   - [ ] Test backend process management
-   - [ ] Add error handling for backend startup
+### 1. Extension Project Setup
+- [ ] Create VS Code extension project
+  ```bash
+  cd electron-app
+  npm init @vscode/extension permits-extension
+  ```
+- [ ] Configure package.json
+  - [ ] Add activation event: `"activationEvents": ["onCommand:permits.openSearchUI"]`
+  - [ ] Add command contribution:
+    ```json
+    {
+      "contributes": {
+        "commands": [{
+          "command": "permits.openSearchUI",
+          "title": "Open Food Permits Search"
+        }]
+      }
+    }
+    ```
+- [ ] Set up TypeScript development
+  ```bash
+  cd permits-extension
+  npm install --save-dev typescript @types/node @types/vscode
+  ```
+  - [ ] Create minimal tsconfig.json for extension.ts → out/extension.js
 
-9. Basic UI Components
-   - [ ] Create SearchBar component
-   - [ ] Create StatusFilter component
-   - [ ] Create basic ListView component
-   - [ ] Test each component in isolation
+### 2. Backend Process Management
+- [ ] Implement extension.ts
+  - [ ] Create activate(context) function
+    - [ ] Spawn Python FastAPI backend using child_process.spawn
+    - [ ] Log stdout/stderr to VS Code console
+    - [ ] Handle spawn failures with vscode.window.showErrorMessage
+  - [ ] Register "permits.openSearchUI" command
+  - [ ] Implement deactivate() to kill backend process
 
-10. API Integration
-    - [ ] Create API service layer
-    - [ ] Implement searchPermits function
-    - [ ] Implement searchAddress function
-    - [ ] Implement findNearby function
-    - [ ] Test each API call
+### 3. Webview Project Setup
+- [ ] Initialize React + TypeScript project
+  ```bash
+  cd permits-extension
+  mkdir webview
+  cd webview
+  npm init -y
+  npm install react react-dom
+  npm install --save-dev typescript @types/react @types/react-dom esbuild
+  ```
+- [ ] Configure webview
+  - [ ] Create tsconfig.json with React JSX support
+  - [ ] Set up src/index.tsx with root div
+  - [ ] Create src/App.tsx with component placeholders:
+    - [ ] SearchBar
+    - [ ] StatusFilter
+    - [ ] ListView
+    - [ ] LoadingSpinner
+    - [ ] ErrorBanner
+  - [ ] Add esbuild script to package.json
+  - [ ] Create static webview/dist/index.html with CSP
 
-11. UI State Management
-    - [ ] Set up React state for search queries
-    - [ ] Implement search form submission
-    - [ ] Add loading states
-    - [ ] Add error handling
+### 4. UI Components & Message Passing
+- [ ] Implement SearchBar.tsx
+  - [ ] Text input for applicant/street search
+  - [ ] Status dropdown (ALL/APPROVED/EXPIRED)
+  - [ ] Search trigger (Enter/button)
+- [ ] Implement ListView.tsx
+  - [ ] Scrollable table/list of permits
+  - [ ] Display: Applicant, Address, Status
+- [ ] Create LoadingSpinner.tsx and ErrorBanner.tsx
+- [ ] Implement App.tsx
+  - [ ] State management (query, status, results, loading, error)
+  - [ ] Message handling
+  - [ ] Tab navigation for:
+    - [ ] Search by Name
+    - [ ] Search by Address
+    - [ ] Find Nearby
+- [ ] Implement extension.ts webview handling
+  - [ ] Create webview panel
+  - [ ] Load index.html
+  - [ ] Handle message routing for:
+    - [ ] /permits endpoint
+    - [ ] /permits/address endpoint
+    - [ ] /permits/nearby endpoint
 
-## Phase 3: Integration
-12. Backend-Frontend Integration
-    - [ ] Connect SearchBar to API
-    - [ ] Connect StatusFilter to API
-    - [ ] Display results in ListView
-    - [ ] Test full search flow
+### 5. Testing & Verification
+- [ ] Set up testing environment
+  ```bash
+  cd permits-extension
+  npm install --save-dev @vscode/test-electron mocha
+  ```
+- [ ] Write Mocha tests (test/suite/extension.test.ts)
+  - [ ] Test activation
+  - [ ] Test backend spawning
+  - [ ] Test message routing
+- [ ] Manual testing checklist
+  - [ ] Backend process launches
+  - [ ] Command appears in palette
+  - [ ] Search by Name works
+  - [ ] Search by Address works
+  - [ ] Find Nearby works
+  - [ ] Error handling works
 
-13. Error Handling
-    - [ ] Add backend error responses
-    - [ ] Add frontend error display
-    - [ ] Test error scenarios
-
-14. Documentation
-    - [ ] Add API documentation
-    - [ ] Update README with setup instructions
-    - [ ] Document known limitations
+## Phase 3: Documentation & Polish
+- [ ] Create comprehensive README.md
+  - [ ] Problem & solution description
+  - [ ] Technical decisions rationale
+  - [ ] Setup instructions
+  - [ ] Usage examples
+- [ ] Add API documentation
+  - [ ] Document all endpoints
+  - [ ] Add example requests/responses
+  - [ ] Include error handling
+- [ ] Final testing & bug fixes
+  - [ ] Cross-platform testing
+  - [ ] Performance optimization
+  - [ ] Security review
+- [ ] Prepare for submission
+  - [ ] Code cleanup
+  - [ ] Documentation review
+  - [ ] Final testing checklist
 
 ## Testing Strategy
 Each task should be tested with:

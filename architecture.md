@@ -1,164 +1,169 @@
-1. File & Folder Structure
-project-root/
-│
-├── backend/                          ← Python/FastAPI "sidecar" service
-│   ├── .python-version               ← pyenv-pinned Python version (e.g. "3.11.4")
-│   ├── requirements.txt              ← exact Python dependencies
-│   ├── main.py                       ← FastAPI application (uses in-RAM DB, loads CSV on startup)
-│   ├── Mobile_Food_Facility_Permits.csv  ← source data
-│   ├── tests/                        ← test suite for backend
-│   │   └── test_endpoints.py         ← tests for API endpoints
-│   └── .venv/                        ← virtualenv created via `python -m venv .venv`
-│
-├── electron-app/                     ← Electron-based frontend
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── public/
-│   │   └── index.html                ← shell HTML
-│   └── src/
-│       ├── main.ts                   ← Electron main (spawns Python)
-│       ├── preload.ts                ← secure IPC bridge (optional)
-│       └── renderer/
-│           ├── index.tsx             ← React entrypoint
-│           ├── App.tsx               ← top-level component
-│           ├── components/           ← UI components (SearchBar, MapView, ListView…)
-│           └── services/
-│               └── api.ts            ← client-side fetch wrappers
-│
-└── README.md                         ← high-level instructions
+# Food Facilities Search - VS Code Extension Architecture
 
+## Overview
+This project implements a VS Code extension for searching and viewing Mobile Food Facility Permits in San Francisco. The extension provides a rich UI for searching permits by name, address, and location, with real-time filtering capabilities.
 
+## System Architecture
 
-2. Component Responsibilities
+### 1. Backend (FastAPI + SQLite)
+- **Data Storage**
+  - SQLite database with permits table
+  - Schema matches Mobile_Food_Facility_Permits.csv structure
+  - Indexes on frequently searched fields (applicant, status, address)
 
-2.1 backend/
-.python-version
-Pins the Python interpreter via pyenv (pyenv local 3.11.4).
+- **API Endpoints**
+  - GET /permits
+    - Query parameters: applicant, status
+    - Returns filtered list of permits
+  - GET /permits/address
+    - Query parameter: street
+    - Returns permits matching partial street name
+  - GET /permits/nearby
+    - Query parameters: lat, lon, status, limit
+    - Returns nearest permits with optional status filter
 
-requirements.txt
-Contains:
-fastapi==0.100.0
-uvicorn[standard]==0.23.1
-pydantic==2.11.5
-pytest==7.4.3
-httpx==0.25.1
+### 2. VS Code Extension
+- **Extension Structure**
+  ```
+  permits-extension/
+  ├── src/
+  │   ├── extension.ts        # Extension entry point
+  │   └── webview/            # React webview application
+  │       ├── src/
+  │       │   ├── components/ # React components
+  │       │   └── App.tsx     # Main application
+  │       └── dist/           # Built webview assets
+  └── package.json
+  ```
 
-main.py
-On startup, loads Mobile_Food_Facility_Permits.csv into an in-memory SQLite database.
-Defines three FastAPI endpoints:
-GET /permits?applicant=&status=
-  - Optional applicant filter (case-insensitive partial match)
-  - Optional status filter (exact match)
-  - Returns all matching permits
+- **Extension Features**
+  - Command: "Open Food Permits Search"
+  - Webview panel with React UI
+  - Backend process management
+  - Message passing between extension and webview
 
-GET /permits/address?street=
-  - Required street parameter
-  - Case-insensitive partial match on address field
-  - Returns all matching permits
+### 3. Webview Application (React + TypeScript)
+- **Components**
+  - SearchBar: Text input and status filter
+  - ListView: Scrollable permit list
+  - LoadingSpinner: Loading state indicator
+  - ErrorBanner: Error message display
 
-GET /permits/nearby?lat=&lon=&status=&limit=&include_all=
-  - Required lat/lon coordinates
-  - Optional status filter
-  - Optional limit (default 10)
-  - Optional include_all flag to ignore status filter
-  - Returns permits sorted by distance with distance_km field
-  - Filters out invalid coordinates (null or 0,0)
+- **Features**
+  - Search by applicant name
+  - Search by partial street address
+  - Find nearby permits
+  - Status filtering
+  - Real-time updates
 
-Uses direct SQLite queries for efficient filtering and distance calculations.
-Serves Swagger UI at /docs.
+## Data Flow
+1. User activates extension via command palette
+2. Extension spawns FastAPI backend process
+3. Webview panel opens with React UI
+4. User interactions trigger API calls:
+   - Search queries → /permits endpoint
+   - Address searches → /permits/address endpoint
+   - Location searches → /permits/nearby endpoint
+5. Results displayed in ListView component
 
-In-RAM SQLite
-Holds all permit records in memory for the lifetime of the process.
-State lives here; no on-disk DB file.
-Thread-safe connection handling via threading.local().
+## Documentation Requirements
 
-tests/
-test_endpoints.py
-Comprehensive test suite for all API endpoints:
-- Tests root endpoint
-- Tests /permits with various filters
-- Tests /permits/address with exact and partial matches
-- Tests /permits/nearby with distance, status, limit, and include_all
-- Tests edge cases (invalid coordinates, sorting, field presence)
+### README Contents
+1. **Problem & Solution**
+   - Description of the Mobile Food Facility Permit search challenge
+   - Overview of the VS Code extension solution
+   - Key features and capabilities
 
-.venv/
-Isolated Python environment for dependencies.
-2.2 electron-app/
-package.json / tsconfig.json
-Manage Node/Electron dependencies and TypeScript settings.
-public/index.html
-Shell HTML loaded by the renderer.
-src/main.ts
-On app.whenReady(), spawns the Python backend:
-spawn(
-  path.join(__dirname, '../backend/.venv/bin/python'),
-  [
-    path.join(__dirname, '../backend/load_data.py'),
-    '&&',
-    'uvicorn', 'main:app',
-    '--host', '127.0.0.1',
-    '--port', '8000'
-  ],
-  { shell: true }
-);
-Creates a BrowserWindow pointed at public/index.html.
-On app exit, kills the Python process.
-src/preload.ts
-Sets up secure IPC channels between main & renderer (if needed).
-src/renderer/
-App.tsx
-Top-level React component holding UI state:
-applicantQuery, streetQuery, statusFilter
-userLocation (lat/lon from Geolocation API)
-components/
-SearchBar, StatusFilter, MapView, ListView, etc.
-services/api.ts
-Exports searchPermits(), searchAddress(), findNearby().
-Internally calls fetch("http://127.0.0.1:8000/...").
-3. State & Data Flow
+2. **Technical Decisions**
+   - Rationale for VS Code extension approach
+   - React + TypeScript for webview UI
+   - FastAPI + SQLite for backend
+   - Testing strategy and tools
 
-Persistent State
-None on disk: CSV is read at startup, state lives in RAM only.
-Ephemeral State (Frontend)
-React State (via hooks) stores UI inputs and map center.
-Optionally, React Query caches recent API results.
-Service Interactions
-Electron Main → Python Backend
-spawn() runs load_data.py, then serves FastAPI on port 8000.
-Renderer → Backend
-React components fetch() JSON from 127.0.0.1:8000.
-JSON results drive UI updates.
-4. Startup & Run
+3. **Critique & Trade-offs**
+   - Time constraints and prioritization
+   - Technical trade-offs made
+   - Features left for future implementation
+   - Scaling considerations
 
-Backend Setup (once or when CSV updates):
-cd backend
-pyenv install           # if needed
-pyenv local             # reads .python-version
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-Electron App:
-cd electron-app
-npm install
-npm run dev             # or `npm run build`
-npm start               # launches Electron (+ backend)
-User Flow
-Electron spawns Python → FastAPI listens on port 8000.
-Renderer loads React UI and invokes API wrappers.
-User types search → sees filtered list & map markers.
-5. Next Steps & Scaling
+4. **Setup Instructions**
+   - Extension installation
+   - Backend setup
+   - Development environment
+   - Testing procedures
 
-FTS5: enable SQLite full-text search for faster substring or token queries.
-R-Tree or SpatiaLite: add spatial indexes for O(log n) nearest-neighbor.
-Startup Robustness: in main.ts, wait for FastAPI readiness before showing UI.
-Migrations: convert load_data.py into a one-time migration script for future schema changes.
+## Technical Decisions Rationale
 
+### Why VS Code Extension?
+1. **IDE Integration**
+   - Native development environment
+   - Familiar interface for developers
+   - Seamless process management
 
-### CODING PROTOCOL ###
-" Coding Instructions
-- Write the absolute minimum code required
-- No sweeping changes
-- No unrelated edits - focus on just the task you're on
-- Make code precise, modular, testable
-- Don't break existing functionality
-- If I need to do anything (e.g. Supabase/AWS config), tell me clearly "
+2. **Webview Technology**
+   - Modern web technologies (React, TypeScript)
+   - Rich UI capabilities
+   - Secure execution environment
+
+3. **Backend Management**
+   - Clean process lifecycle
+   - Automatic startup/shutdown
+   - Error handling and recovery
+
+### Why React + TypeScript?
+1. **Type Safety**
+   - Catch errors at compile time
+   - Better IDE support
+   - Improved maintainability
+
+2. **Component Architecture**
+   - Reusable UI components
+   - Clear separation of concerns
+   - Easy testing and maintenance
+
+### Why FastAPI + SQLite?
+1. **Performance**
+   - Async request handling
+   - Efficient data access
+   - Minimal resource usage
+
+2. **Simplicity**
+   - No external database required
+   - Easy deployment
+   - Built-in API documentation
+
+3. **Scalability Considerations**
+   - Current: In-memory SQLite for development
+   - Future: Persistent SQLite or migration to PostgreSQL
+   - Potential: Add caching layer for frequent queries
+
+## Security Considerations
+1. Content Security Policy for webview
+2. Input validation on API endpoints
+3. Error handling and user feedback
+4. Safe process management
+
+## Testing Strategy
+1. **Backend Tests**
+   - Unit tests for database operations
+   - API endpoint integration tests
+   - Data loading validation
+
+2. **Extension Tests**
+   - Activation and deactivation
+   - Backend process management
+   - Message passing
+
+3. **Webview Tests**
+   - Component rendering
+   - User interactions
+   - State management
+
+## Future Improvements
+1. Add permit details view
+2. Implement permit status updates
+3. Add map visualization
+4. Support multiple data sources
+5. Add user preferences
+6. Implement caching for performance
+7. Add export functionality
